@@ -1,0 +1,16 @@
+[project]
+name = "mendrift"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.116.0",
+    "langgraph>=1.2.9",
+    "mcp>=1.28.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.15.21",
+]
