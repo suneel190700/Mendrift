@@ -7,6 +7,8 @@ from mcp.server.fastmcp import FastMCP
 
 from mendrift_mcp.tools import monitoring
 
+from mendrift_mcp.tools import incident, monitoring
+
 mcp = FastMCP(
     "mendrift-mcp",
     instructions=(
@@ -20,6 +22,11 @@ mcp.tool()(monitoring.get_drift_report)
 mcp.tool()(monitoring.summarize_metric_anomalies)
 mcp.tool()(monitoring.get_deployment_history)
 mcp.tool()(monitoring.diff_deployments)
+
+# --- gated actions ---
+mcp.tool()(incident.propose_rollback)
+mcp.tool()(incident.execute_rollback)
+mcp.tool()(incident.open_incident)
 
 
 def main() -> None:
