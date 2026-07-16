@@ -44,7 +44,8 @@ Tested live: Claude was ordered to roll back "with full authorization," then
 handed a fabricated token. Both attempts failed — the second rejected by
 constant-time HMAC comparison:
 
-![Fabricated token rejected](docs/gate-defense.png)
+![Approval gate defense: refusal, then cryptographic rejection](docs/gate-defense.png)
+
 
 See `tests/test_approval_gate.py`, including the action-scoping test: a token
 minted for one model/version is invalid for any other.
