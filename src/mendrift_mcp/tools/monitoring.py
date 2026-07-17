@@ -1,29 +1,19 @@
 """Read-only diagnostic tools: drift reports, anomaly summaries, deployment history.
 
-Backed by Evidently for drift computation and a pluggable DeploymentStore.
-In demo mode (MENDRIFT_DEMO=1) tools serve from seeded fixture data so the
-server is demoable without live infrastructure.
+In demo mode (MENDRIFT_DEMO=1) tools serve fixture data so the server is
+demoable without live infrastructure. The demo world is minimally stateful:
+after a rollback executes, metric anomalies come back clean.
 """
 from __future__ import annotations
 
-import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-FIXTURES = Path(__file__).resolve().parents[3] / "mendrift" / "evals" / "trajectories"
-
 
 def _demo_mode() -> bool:
     return os.environ.get("MENDRIFT_DEMO", "0") == "1"
-
-
-def _load_fixture(name: str) -> dict[str, Any]:
-    path = FIXTURES / f"{name}.json"
-    if path.exists():
-        return json.loads(path.read_text())
-    return {}
 
 
 def get_drift_report(
@@ -33,9 +23,9 @@ def get_drift_report(
 ) -> dict[str, Any]:
     """Compute a data/prediction drift report for a deployed model.
 
-    Compares the current serving window against a reference window using
-    Evidently (PSI + KS tests per feature). Returns per-feature drift scores,
-    overall drift flag, and the top drifted features.
+    Compares the current serving window against a reference window (PSI + KS
+    tests per feature). Returns per-feature drift scores, an overall drift
+    flag, and the top drifted features.
 
     Args:
         model_name: Registered model name as it appears in the model registry.
@@ -43,7 +33,7 @@ def get_drift_report(
         current_window_hours: Current window size (default 24 hours).
     """
     if _demo_mode():
-        return _load_fixture("drift_report_demo") or {
+        return {
             "model_name": model_name,
             "overall_drift": True,
             "n_features": 42,
@@ -66,11 +56,19 @@ def summarize_metric_anomalies(
 ) -> dict[str, Any]:
     """Summarize serving-metric anomalies (latency, error rate, prediction stats).
 
-    Returns metric series statistics with anomaly windows flagged via rolling
-    z-score, suitable for an LLM to reason over without raw time series.
+    Returns metric statistics with anomaly windows flagged via rolling z-score,
+    suitable for an LLM to reason over without raw time series.
     """
     if _demo_mode():
-        return _load_fixture("metric_anomalies_demo") or {
+        marker = Path("/tmp/mendrift_rollback_marker")
+        if marker.exists() and marker.read_text().startswith(model_name):
+            return {
+                "model_name": model_name,
+                "lookback_hours": lookback_hours,
+                "anomalies": [],
+                "note": "post-rollback window: anomalies cleared",
+            }
+        return {
             "model_name": model_name,
             "lookback_hours": lookback_hours,
             "anomalies": [
@@ -96,7 +94,7 @@ def summarize_metric_anomalies(
 def get_deployment_history(model_name: str, limit: int = 10) -> dict[str, Any]:
     """List recent deployments/version transitions for a model, newest first."""
     if _demo_mode():
-        return _load_fixture("deployment_history_demo") or {
+        return {
             "model_name": model_name,
             "deployments": [
                 {"version": "14", "stage": "Production", "deployed_at": "2026-07-12T08:05:00Z", "run_id": "run_f83a"},
@@ -113,7 +111,7 @@ def diff_deployments(model_name: str, version_a: str, version_b: str) -> dict[st
     and the newly deployed version.
     """
     if _demo_mode():
-        return _load_fixture("deployment_diff_demo") or {
+        return {
             "model_name": model_name,
             "version_a": version_a,
             "version_b": version_b,

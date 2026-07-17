@@ -13,6 +13,7 @@ import json
 import os
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 _SECRET = os.environ.get("MENDRIFT_APPROVAL_SECRET", "dev-secret-change-me").encode()
@@ -48,6 +49,12 @@ def execute_rollback(model_name: str, target_version: str, approval_token: str) 
     expected = _sign(f"rollback:{model_name}:{target_version}")
     if not hmac.compare_digest(approval_token, expected):
         return {"status": "rejected", "error": "invalid or missing approval_token"}
+
+    # Demo world is stateful: a rollback leaves a marker so post-rollback
+    # metrics come back clean (see monitoring.summarize_metric_anomalies).
+    if os.environ.get("MENDRIFT_DEMO", "0") == "1":
+        Path("/tmp/mendrift_rollback_marker").write_text(f"{model_name}:{target_version}")
+
     # TODO(live mode): MlflowClient().transition_model_version_stage(...)
     return {
         "status": "executed",
