@@ -46,8 +46,10 @@ Evidence rules:
 - If key evidence tools fail or return errors, do NOT recommend destructive
   actions — recommend incident_only and say what could not be verified.
 
-When you are confident, respond WITHOUT tool calls, with ONLY this JSON:
-{"diagnosis": "<root-cause narrative citing evidence>",
+When you are confident, respond WITHOUT tool calls, with ONLY this JSON
+(keep the diagnosis to 2-4 sentences citing specific evidence — be concise,
+a long narrative risks truncation):
+{"diagnosis": "<root-cause narrative, 2-4 sentences citing specific evidence>",
  "recommended_action": "<rollback|retrain|incident_only|none>",
  "target_version": "<version to roll back to, or null>"}"""
 
