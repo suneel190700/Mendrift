@@ -1,0 +1,88 @@
+{
+  "name": "quality_degradation_retrain_v0_aml-screener",
+  "alert": {
+    "source": "evidently",
+    "type": "quality",
+    "model_name": "aml-screener",
+    "detail": "weekly AUC dropped 0.89 to 0.84; no deploy in 3 weeks"
+  },
+  "world": {
+    "get_drift_report": {
+      "overall_drift": true,
+      "n_drifted": 11,
+      "top_drifted_features": [
+        {
+          "feature": "tenure_months",
+          "psi": 0.35,
+          "test": "PSI"
+        },
+        {
+          "feature": "plan_type_freq",
+          "psi": 0.29,
+          "test": "PSI"
+        }
+      ]
+    },
+    "get_deployment_history": {
+      "deployments": [
+        {
+          "version": "7",
+          "stage": "Production",
+          "deployed_at": "2026-06-20T10:00:00Z"
+        }
+      ]
+    },
+    "summarize_metric_anomalies": {
+      "anomalies": [
+        {
+          "metric": "weekly_auc",
+          "baseline": 0.89,
+          "current": 0.84,
+          "zscore": 3.4,
+          "window_start": "2026-07-10T00:00:00Z"
+        }
+      ]
+    }
+  },
+  "script": [
+    {
+      "content": "{\"classification\": \"quality\"}"
+    },
+    {
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "t1",
+          "name": "get_deployment_history",
+          "args": {
+            "model_name": "aml-screener"
+          }
+        }
+      ]
+    },
+    {
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "t2",
+          "name": "get_drift_report",
+          "args": {
+            "model_name": "aml-screener"
+          }
+        }
+      ]
+    },
+    {
+      "content": "{\"diagnosis\": \"AUC decay with 11 drifted features and no recent deploy: gradual population shift, not a bad release. Rollback has no target; model needs retraining on current data.\", \"recommended_action\": \"retrain\", \"target_version\": null}"
+    }
+  ],
+  "expect": {
+    "classification": "quality",
+    "required_tool_sequence": [
+      "get_deployment_history",
+      "open_incident"
+    ],
+    "terminal_action": "incident_opened",
+    "approve": false
+  }
+}

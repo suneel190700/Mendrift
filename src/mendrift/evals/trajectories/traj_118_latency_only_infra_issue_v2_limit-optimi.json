@@ -1,0 +1,89 @@
+{
+  "name": "latency_only_infra_issue_v2_limit-optimizer",
+  "alert": {
+    "source": "datadog",
+    "type": "latency",
+    "model_name": "limit-optimizer",
+    "detail": "p95 sustained 550ms for 2h; no deploy in 5 days"
+  },
+  "world": {
+    "summarize_metric_anomalies": {
+      "anomalies": [
+        {
+          "metric": "p95_latency_ms",
+          "baseline": 180,
+          "current": 550,
+          "zscore": 5.1,
+          "window_start": "2026-07-16T14:00:00Z"
+        }
+      ]
+    },
+    "get_deployment_history": {
+      "deployments": [
+        {
+          "version": "27",
+          "stage": "Production",
+          "deployed_at": "2026-07-12T08:05:00Z"
+        }
+      ]
+    },
+    "get_drift_report": {
+      "overall_drift": false,
+      "n_drifted": 0,
+      "top_drifted_features": []
+    }
+  },
+  "script": [
+    {
+      "content": "{\"classification\": \"latency\"}"
+    },
+    {
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "t1",
+          "name": "summarize_metric_anomalies",
+          "args": {
+            "model_name": "limit-optimizer"
+          }
+        }
+      ]
+    },
+    {
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "t2",
+          "name": "get_deployment_history",
+          "args": {
+            "model_name": "limit-optimizer"
+          }
+        }
+      ]
+    },
+    {
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "t3",
+          "name": "get_drift_report",
+          "args": {
+            "model_name": "limit-optimizer"
+          }
+        }
+      ]
+    },
+    {
+      "content": "{\"diagnosis\": \"Latency regression with zero drift and no recent deploy: serving infrastructure issue (node pressure or downstream dependency), not the model. Rollback would not help.\", \"recommended_action\": \"incident_only\", \"target_version\": null}"
+    }
+  ],
+  "expect": {
+    "classification": "latency",
+    "required_tool_sequence": [
+      "summarize_metric_anomalies",
+      "open_incident"
+    ],
+    "terminal_action": "incident_opened",
+    "approve": false
+  }
+}
