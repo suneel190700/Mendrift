@@ -53,16 +53,34 @@ first-class path: no token → `closed_approval_denied`, no execution.
 
 ![Kill-and-resume demo](docs/interrupt-demo.gif)
 
+## Agent design
+
+| step | model | why |
+|---|---|---|
+| classify | Haiku | single constrained label; cheapest path |
+| diagnose | Sonnet | multi-hop tool reasoning over evidence |
+| verify | Haiku | threshold check on fresh metrics |
+
+Routing lives in a code table (`ROUTER_TABLE`), not prompts, so cost per path
+is measurable config. The diagnose loop is bounded (max 8 tool calls) with
+per-call retries and capped backoff; on tool failure the model receives a
+structured error record, and on budget exhaustion the agent degrades to
+opening an incident with partial evidence — it never invents a diagnosis.
+
+Run a full incident end to end against real models:
+
+````bash
+rm -f demo.db
+PYTHONPATH=src uv run python scripts/demo_interrupt.py start    # Sonnet diagnoses, halts at gate
+PYTHONPATH=src uv run python scripts/demo_interrupt.py approve  # resumes -> resolved
+````
+
 ## Quickstart (demo mode)
 
 ````bash
 uv sync
 MENDRIFT_DEMO=1 uv run mendrift-mcp     # stdio MCP server with fixture data
 PYTHONPATH=src uv run pytest -v         # approval-gate test suite
-
-# human-gate demo: halt -> kill process -> resume on approval
-PYTHONPATH=src uv run python scripts/demo_interrupt.py start
-PYTHONPATH=src uv run python scripts/demo_interrupt.py approve   # or: deny
 ````
 
 Claude Desktop config:
@@ -81,9 +99,12 @@ Claude Desktop config:
 - [x] four read tools with demo-mode fixtures (`MENDRIFT_DEMO=1`)
 - [x] HMAC-gated rollback with action-scoped single-use tokens (tests first)
 - [x] LangGraph incident graph: SQLite checkpointing + human-approval interrupt, kill-resume proven
-- [ ] LLM nodes (Haiku classify / Sonnet diagnose / Haiku verify) with model routing
+- [x] real LLM nodes: Haiku classify/verify, Sonnet diagnose tool loop — live incident runs to `resolved`
 - [ ] trajectory eval harness (~40 synthetic incidents, ungated-write hard fail)
 - [ ] live mode: Evidently drift computation, MLflow registry via community mlflow-mcp
+- [ ] publish: PyPI + MCP community servers registry
 ````
 ````
+
+What this version contains vs the premature one: the **Agent design** section stays (routing, bounded loop, degradation — all true and running as of Phase 5, plus the real-model demo commands), the **Evaluation** section is removed entirely, the quickstart's pytest line says only "approval-gate test suite," and the status list has exactly five checked boxes with the eval harness back in the unchecked column.
 
