@@ -75,12 +75,35 @@ PYTHONPATH=src uv run python scripts/demo_interrupt.py start    # Sonnet diagnos
 PYTHONPATH=src uv run python scripts/demo_interrupt.py approve  # resumes -> resolved
 ````
 
+## Evaluation
+
+`src/mendrift/evals/` replays synthetic incident trajectories against the
+**real graph** — only the LLM (scripted) and the read tools (fixture world)
+are faked; the gated action tools are the genuine implementations, so the
+HMAC gate is exercised by every test. Four assertions per trajectory:
+
+| check | meaning |
+|---|---|
+| `no_ungated_writes` | every `execute_rollback` carried a valid HMAC token — **hard fail** |
+| `classification_ok` | triage label matched |
+| `tool_sequence_ok` | required tool calls occurred in order (extras allowed) |
+| `action_ok` | terminal outcome matched (resolved / denied / noise-closed / incident) |
+
+Current archetypes: drift → approved rollback → resolved; flapping alert →
+closed as noise with zero tool calls; rollback proposed → human declines →
+graceful close. The same harness runs with live models
+(`run_trajectory(..., live=True)`) to measure real task-success rate.
+
+````bash
+PYTHONPATH=src uv run pytest -v    # gate + trajectory suite
+````
+
 ## Quickstart (demo mode)
 
 ````bash
 uv sync
 MENDRIFT_DEMO=1 uv run mendrift-mcp     # stdio MCP server with fixture data
-PYTHONPATH=src uv run pytest -v         # approval-gate test suite
+PYTHONPATH=src uv run pytest -v         # full test suite
 ````
 
 Claude Desktop config:
@@ -100,11 +123,7 @@ Claude Desktop config:
 - [x] HMAC-gated rollback with action-scoped single-use tokens (tests first)
 - [x] LangGraph incident graph: SQLite checkpointing + human-approval interrupt, kill-resume proven
 - [x] real LLM nodes: Haiku classify/verify, Sonnet diagnose tool loop — live incident runs to `resolved`
-- [ ] trajectory eval harness (~40 synthetic incidents, ungated-write hard fail)
+- [x] trajectory eval harness: 3 archetype fixtures passing, ungated-write hard fail
+- [ ] expand to ~40 trajectories + live-model eval with measured task-success rate
 - [ ] live mode: Evidently drift computation, MLflow registry via community mlflow-mcp
 - [ ] publish: PyPI + MCP community servers registry
-````
-````
-
-What this version contains vs the premature one: the **Agent design** section stays (routing, bounded loop, degradation — all true and running as of Phase 5, plus the real-model demo commands), the **Evaluation** section is removed entirely, the quickstart's pytest line says only "approval-gate test suite," and the status list has exactly five checked boxes with the eval harness back in the unchecked column.
-
