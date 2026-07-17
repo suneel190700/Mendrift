@@ -15,6 +15,9 @@ alert ──> classify ──> diagnose (MCP tools) ──> propose
                                     execute ──> verify recovery
 ````
 
+Built with LangGraph (agent orchestration), LangChain (`ChatAnthropic` +
+`bind_tools`), the Model Context Protocol, and Claude (Haiku + Sonnet).
+
 ## mendrift-mcp tools
 
 | tool | type | purpose |
@@ -66,6 +69,9 @@ is measurable config. The diagnose loop is bounded (max 8 tool calls) with
 per-call retries and capped backoff; on tool failure the model receives a
 structured error record, and on budget exhaustion the agent degrades to
 opening an incident with partial evidence — it never invents a diagnosis.
+Destructive actions require affirmative evidence: a rollback is recommended
+only when retrieved evidence links the symptom to a specific deployment, never
+on deploy-correlation alone.
 
 Run a full incident end to end against real models:
 
@@ -89,21 +95,32 @@ HMAC gate is exercised by every test. Four assertions per trajectory:
 | `tool_sequence_ok` | required tool calls occurred in order (extras allowed) |
 | `action_ok` | terminal outcome matched (resolved / denied / noise-closed / incident) |
 
-Current archetypes: drift → approved rollback → resolved; flapping alert →
-closed as noise with zero tool calls; rollback proposed → human declines →
-graceful close. The same harness runs with live models
-(`run_trajectory(..., live=True)`) to measure real task-success rate.
+Seven incident archetypes — drift → approved rollback → resolved; flapping
+alert → closed as noise; rollback proposed → human declines; quality decay →
+retrain; latency with no deploy → infra incident; upstream data outage (drift
+that looks deploy-caused but isn't); monitoring backend down → graceful
+degradation — parameterized to 35 trajectories.
+
+**35/35 on live-model eval** (real Haiku + Sonnet), zero ungated writes. The
+same harness runs scripted for fast CI and live for the measured rate:
 
 ````bash
-PYTHONPATH=src uv run pytest -v    # gate + trajectory suite
+PYTHONPATH=src uv run python scripts/run_traj.py --all          # scripted, fast
+PYTHONPATH=src uv run python scripts/run_traj.py --all --live   # real models
 ````
+
+The live suite surfaced three real failure classes during development, each
+fixed at its own layer: a JSON extractor masking a correct decision, a
+classifier baited by an ambiguous alert into "noise," and a diagnoser
+proposing rollback on correlation alone — the last two now guarded by prompt
+rules and the first by a layered parser.
 
 ## Quickstart (demo mode)
 
 ````bash
 uv sync
 MENDRIFT_DEMO=1 uv run mendrift-mcp     # stdio MCP server with fixture data
-PYTHONPATH=src uv run pytest -v         # full test suite
+PYTHONPATH=src uv run pytest -v         # gate + trajectory suite
 ````
 
 Claude Desktop config:
@@ -122,8 +139,8 @@ Claude Desktop config:
 - [x] four read tools with demo-mode fixtures (`MENDRIFT_DEMO=1`)
 - [x] HMAC-gated rollback with action-scoped single-use tokens (tests first)
 - [x] LangGraph incident graph: SQLite checkpointing + human-approval interrupt, kill-resume proven
-- [x] real LLM nodes: Haiku classify/verify, Sonnet diagnose tool loop — live incident runs to `resolved`
-- [x] trajectory eval harness: 3 archetype fixtures passing, ungated-write hard fail
-- [ ] expand to ~40 trajectories + live-model eval with measured task-success rate
+- [x] LLM nodes on LangChain (`ChatAnthropic.bind_tools`): Haiku classify/verify, Sonnet diagnose loop
+- [x] trajectory eval harness: 7 archetypes parameterized to 35 trajectories, 35/35 live, zero ungated writes
+- [ ] expand to 40+ logic-distinct incident archetypes
 - [ ] live mode: Evidently drift computation, MLflow registry via community mlflow-mcp
-- [ ] publish: PyPI + MCP community servers registry
+- [ ] publish: CI, PyPI + MCP community servers registry
