@@ -28,5 +28,8 @@ class FakeToolLayer:
         if name == "propose_rollback":
             return incident.propose_rollback(**args)
         if name in self.world:
-            return self.world[name]
+            resp = self.world[name]
+            if isinstance(resp, dict) and "__raise__" in resp:
+                raise RuntimeError(resp["__raise__"])
+            return resp
         raise KeyError(f"fixture world has no response for tool '{name}'")

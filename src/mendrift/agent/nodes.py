@@ -25,7 +25,10 @@ Given this monitoring alert, answer with ONLY a JSON object:
 drift    - input/prediction distribution shift
 latency  - serving latency or throughput regression
 quality  - accuracy/recall/business-metric degradation
-noise    - flapping alert, known maintenance, or insufficient signal
+noise    - flapping/auto-resolved alert, known maintenance, or no substantive signal
+           (an erroring or unavailable monitoring backend does NOT make an alert
+            noise — if the alert reports a real symptom like a PSI spike, classify
+            by that symptom)
 
 Alert:
 {alert}"""
@@ -33,8 +36,17 @@ Alert:
 DIAGNOSE_SYSTEM = """You are an ML incident responder. Use the available tools to
 find the root cause. Work evidence-first: pull the drift report and metric
 anomalies, check what was deployed recently, and diff versions when a deploy
-correlates with the alert. When you are confident, respond WITHOUT tool calls,
-with ONLY this JSON:
+correlates with the alert.
+
+Evidence rules:
+- Recommend rollback ONLY when retrieved evidence affirmatively links the
+  symptom to a specific deployment (e.g., schema/param changes in the diff
+  that explain the drifted features, or anomalies starting at deploy time).
+- A recent deploy plus an unverified alert is correlation, not evidence.
+- If key evidence tools fail or return errors, do NOT recommend destructive
+  actions — recommend incident_only and say what could not be verified.
+
+When you are confident, respond WITHOUT tool calls, with ONLY this JSON:
 {"diagnosis": "<root-cause narrative citing evidence>",
  "recommended_action": "<rollback|retrain|incident_only|none>",
  "target_version": "<version to roll back to, or null>"}"""

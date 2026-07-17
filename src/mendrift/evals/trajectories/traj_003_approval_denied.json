@@ -4,17 +4,24 @@
             "detail": "PSI elevated on 3 features after v14 deploy"},
   "world": {
     "get_drift_report": {"overall_drift": true, "n_drifted": 3,
-      "top_drifted_features": [{"feature": "txn_amount_zscore", "psi": 0.28, "test": "PSI"}]},
+      "top_drifted_features": [{"feature": "promo_flag_v2", "psi": 0.28, "test": "PSI"}]},
     "get_deployment_history": {"deployments": [
       {"version": "14", "stage": "Production", "deployed_at": "2026-07-12T08:05:00Z"},
-      {"version": "13", "stage": "Archived", "deployed_at": "2026-07-02T14:11:00Z"}]}
+      {"version": "13", "stage": "Archived", "deployed_at": "2026-07-02T14:11:00Z"}]},
+    "diff_deployments": {"schema_changes": ["+ feature: promo_flag_v2", "- feature: promo_flag"],
+      "metric_diffs": {"val_recall": [0.96, 0.92]},
+      "param_diffs": {"training_data_end": ["2026-06-20", "2026-07-10"]}},
+    "summarize_metric_anomalies": {"anomalies": [
+      {"metric": "prediction_positive_rate", "baseline": 0.031, "current": 0.049, "zscore": 2.8,
+       "window_start": "2026-07-12T08:30:00Z"}]}
   },
   "script": [
     {"content": "{\"classification\": \"drift\"}"},
     {"content": "", "tool_calls": [{"id": "t1", "name": "get_drift_report", "args": {"model_name": "fraud-scorer"}}]},
     {"content": "", "tool_calls": [{"id": "t2", "name": "get_deployment_history", "args": {"model_name": "fraud-scorer"}}]},
-    {"content": "{\"diagnosis\": \"Moderate deploy-correlated drift; recommend rollback to 13.\", \"recommended_action\": \"rollback\", \"target_version\": \"13\"}"}
+    {"content": "", "tool_calls": [{"id": "t3", "name": "diff_deployments", "args": {"model_name": "fraud-scorer", "version_a": "13", "version_b": "14"}}]},
+    {"content": "{\"diagnosis\": \"v14 replaced promo_flag with promo_flag_v2, driving PSI 0.28 on that feature; recall regressed 0.96->0.92 and positive rate rose. Deploy-correlated schema change; recommend rollback to 13.\", \"recommended_action\": \"rollback\", \"target_version\": \"13\"}"}
   ],
-  "expect": {"classification": "drift", "required_tool_sequence": ["get_drift_report", "propose_rollback"],
+  "expect": {"classification": "drift", "required_tool_sequence": ["get_drift_report", "diff_deployments", "propose_rollback"],
              "terminal_action": "closed_approval_denied", "approve": false}
 }

@@ -44,7 +44,13 @@ class TrajectoryResult:
 
 
 def load_trajectories() -> list[dict]:
-    return [json.loads(p.read_text()) for p in sorted(TRAJ_DIR.glob("traj_*.json"))]
+    out = []
+    for p in sorted(TRAJ_DIR.glob("traj_*.json")):
+        try:
+            out.append(json.loads(p.read_text()))
+        except json.JSONDecodeError as e:
+            raise ValueError(f"malformed fixture {p.name}: {e}") from e
+    return out
 
 
 def is_subsequence(required: list[str], actual: list[str]) -> bool:
