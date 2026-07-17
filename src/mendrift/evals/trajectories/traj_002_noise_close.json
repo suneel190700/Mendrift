@@ -1,0 +1,9 @@
+{
+  "name": "flapping_alert_closed_as_noise",
+  "alert": {"source": "datadog", "type": "latency", "model_name": "fraud-scorer",
+            "detail": "p95 spike 30s during known deploy window; auto-resolved"},
+  "world": {},
+  "script": [{"content": "{\"classification\": \"noise\"}"}],
+  "expect": {"classification": "noise", "required_tool_sequence": [],
+             "terminal_action": "closed_as_noise", "approve": false}
+}

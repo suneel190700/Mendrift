@@ -1,0 +1,29 @@
+{
+  "name": "drift_after_deploy_rollback",
+  "alert": {"source": "evidently", "type": "drift", "model_name": "fraud-scorer",
+            "detail": "PSI > 0.3 on 6/42 features within 4h of v14 deploy"},
+  "world": {
+    "get_drift_report": {"overall_drift": true, "n_drifted": 6,
+      "top_drifted_features": [{"feature": "promo_flag_v2", "psi": 0.41, "test": "PSI"}]},
+    "get_deployment_history": {"deployments": [
+      {"version": "14", "stage": "Production", "deployed_at": "2026-07-12T08:05:00Z"},
+      {"version": "13", "stage": "Archived", "deployed_at": "2026-07-02T14:11:00Z"}]},
+    "diff_deployments": {"schema_changes": ["+ feature: promo_flag_v2", "- feature: promo_flag"],
+      "metric_diffs": {"val_recall": [0.96, 0.91]}},
+    "summarize_metric_anomalies": {"anomalies": []}
+  },
+  "script": [
+    {"content": "{\"classification\": \"drift\"}"},
+    {"content": "", "tool_calls": [{"id": "t1", "name": "get_drift_report", "args": {"model_name": "fraud-scorer"}}]},
+    {"content": "", "tool_calls": [{"id": "t2", "name": "get_deployment_history", "args": {"model_name": "fraud-scorer"}}]},
+    {"content": "", "tool_calls": [{"id": "t3", "name": "diff_deployments", "args": {"model_name": "fraud-scorer", "version_a": "13", "version_b": "14"}}]},
+    {"content": "{\"diagnosis\": \"v14 schema swap drove drift; recall regressed.\", \"recommended_action\": \"rollback\", \"target_version\": \"13\"}"},
+    {"content": "{\"recovered\": true, \"note\": \"anomalies cleared post-rollback\"}"}
+  ],
+  "expect": {
+    "classification": "drift",
+    "required_tool_sequence": ["get_drift_report", "get_deployment_history", "diff_deployments", "propose_rollback", "execute_rollback"],
+    "terminal_action": "resolved",
+    "approve": true
+  }
+}
