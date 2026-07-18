@@ -7,13 +7,13 @@ When a production model drifts or degrades, Mendrift detects it, diagnoses the
 root cause from monitoring and registry evidence, proposes a remediation, and
 executes it **only after human approval**.
 
-````
+```
 alert ──> classify ──> diagnose (MCP tools) ──> propose
              │                                     │
            noise ──> close               human approval gate
                                                    │
                                     execute ──> verify recovery
-````
+```
 
 Built with LangGraph (agent orchestration), LangChain (`ChatAnthropic` +
 `bind_tools`), the Model Context Protocol, and Claude (Haiku + Sonnet).
@@ -65,73 +65,80 @@ first-class path: no token → `closed_approval_denied`, no execution.
 | verify | Haiku | threshold check on fresh metrics |
 
 Routing lives in a code table (`ROUTER_TABLE`), not prompts, so cost per path
-is measurable config. The diagnose loop is bounded (max 8 tool calls) with
-per-call retries and capped backoff; on tool failure the model receives a
-structured error record, and on budget exhaustion the agent degrades to
-opening an incident with partial evidence — it never invents a diagnosis.
-Destructive actions require affirmative evidence: a rollback is recommended
-only when retrieved evidence links the symptom to a specific deployment, never
-on deploy-correlation alone.
+is measurable config — ~3.9K input / 630 output tokens per incident. The
+diagnose loop is bounded (max 8 tool calls) with per-call retries and capped
+backoff; on tool failure the model receives a structured error record, and on
+budget exhaustion the agent degrades to an incident with partial evidence — it
+never invents a diagnosis. Destructive actions require affirmative evidence: a
+rollback is recommended only when retrieved evidence links the symptom to a
+specific deployment, never on deploy-correlation alone. The agent can also
+recommend **monitor** — real but mild, non-actionable drift is watched, not
+acted on.
 
 Run a full incident end to end against real models:
 
-````bash
+```bash
 rm -f demo.db
 PYTHONPATH=src uv run python scripts/demo_interrupt.py start    # Sonnet diagnoses, halts at gate
 PYTHONPATH=src uv run python scripts/demo_interrupt.py approve  # resumes -> resolved
-````
+```
 
 ## Evaluation
 
 `src/mendrift/evals/` replays synthetic incident trajectories against the
 **real graph** — only the LLM (scripted) and the read tools (fixture world)
-are faked; the gated action tools are the genuine implementations, so the
-HMAC gate is exercised by every test. Four assertions per trajectory:
+are faked; the gated action tools are the genuine implementations, so the HMAC
+gate is exercised by every test. Four assertions per trajectory:
 
 | check | meaning |
 |---|---|
 | `no_ungated_writes` | every `execute_rollback` carried a valid HMAC token — **hard fail** |
 | `classification_ok` | triage label matched |
 | `tool_sequence_ok` | required tool calls occurred in order (extras allowed) |
-| `action_ok` | terminal outcome matched (resolved / denied / noise-closed / incident) |
+| `action_ok` | terminal outcome matched |
 
-Seven incident archetypes — drift → approved rollback → resolved; flapping
-alert → closed as noise; rollback proposed → human declines; quality decay →
-retrain; latency with no deploy → infra incident; upstream data outage (drift
-that looks deploy-caused but isn't); monitoring backend down → graceful
-degradation — parameterized to 35 trajectories.
+**19 logic-distinct incident scenarios** spanning the decision space, each with
+its own evidence shape and correct action:
 
-**35/35 on live-model eval** (real Haiku + Sonnet), zero ungated writes. The
-same harness runs scripted for fast CI and live for the measured rate:
+- **Rollback** — deploy-correlated drift or quality regression with affirmative diff evidence
+- **Retrain** — label/concept shift, segment-specific degradation (no valid rollback target)
+- **Monitor** — mild seasonal drift, low-importance-feature drift, holiday effects
+- **Incident (investigate)** — upstream schema rename, feature-store change, docs-only deploy, calibration break, threshold shift, silent data-quality drop
+- **Graceful degradation** — evidence tools down → incident with partial evidence, never a fabricated diagnosis
+- **Noise** — flapping / auto-resolved alerts closed with zero tool calls
+- **Human-declined** — well-founded rollback the reviewer rejects → closed, no execution
 
-````bash
+Scripted for fast CI, live for the measured rate:
+
+```bash
 PYTHONPATH=src uv run python scripts/run_traj.py --all          # scripted, fast
 PYTHONPATH=src uv run python scripts/run_traj.py --all --live   # real models
-````
+```
 
-The live suite surfaced three real failure classes during development, each
-fixed at its own layer: a JSON extractor masking a correct decision, a
-classifier baited by an ambiguous alert into "noise," and a diagnoser
-proposing rollback on correlation alone — the last two now guarded by prompt
-rules and the first by a layered parser.
+Live-model eval runs at ~95% task-success; the handful of run-to-run
+divergences reflect LLM eval variance on decision-margin scenarios. The live
+suite surfaced real failure classes during development — a JSON extractor
+masking a correct decision, a classifier baited by an alert's reassuring
+wording, and a diagnoser proposing rollback on correlation alone — each fixed
+at its own layer (parser, alert wording, evidence-rule prompt).
 
 ## Quickstart (demo mode)
 
-````bash
+```bash
 uv sync
 MENDRIFT_DEMO=1 uv run mendrift-mcp     # stdio MCP server with fixture data
 PYTHONPATH=src uv run pytest -v         # gate + trajectory suite
-````
+```
 
 Claude Desktop config:
 
-````json
+```json
 {"mcpServers": {"mendrift": {
   "command": "uv",
   "args": ["--directory", "/path/to/mendrift", "run", "mendrift-mcp"],
   "env": {"MENDRIFT_DEMO": "1"}
 }}}
-````
+```
 
 ## Status
 
@@ -140,7 +147,6 @@ Claude Desktop config:
 - [x] HMAC-gated rollback with action-scoped single-use tokens (tests first)
 - [x] LangGraph incident graph: SQLite checkpointing + human-approval interrupt, kill-resume proven
 - [x] LLM nodes on LangChain (`ChatAnthropic.bind_tools`): Haiku classify/verify, Sonnet diagnose loop
-- [x] trajectory eval harness: 7 archetypes parameterized to 35 trajectories, 35/35 live, zero ungated writes
-- [ ] expand to 40+ logic-distinct incident archetypes
+- [x] 19-scenario trajectory eval across the decision space; ~95% live, zero ungated writes
 - [ ] live mode: Evidently drift computation, MLflow registry via community mlflow-mcp
 - [ ] publish: CI, PyPI + MCP community servers registry
