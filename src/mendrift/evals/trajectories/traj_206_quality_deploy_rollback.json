@@ -89,6 +89,9 @@
     },
     {
       "content": "{\"diagnosis\": \"Approval accuracy dropped 0.93->0.85 within 2h of v12, and the diff shows learning_rate raised 0.01->0.1 with val_accuracy already regressed 0.93->0.86 in offline eval. v12 is a bad release with affirmative deploy-linked evidence. Roll back to 11.\", \"recommended_action\": \"rollback\", \"target_version\": \"11\"}"
+    },
+    {
+      "content": "{\"recovered\": true, \"note\": \"accuracy restored post-rollback\"}"
     }
   ],
   "expect": {
