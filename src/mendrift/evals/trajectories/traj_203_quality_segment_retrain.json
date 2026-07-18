@@ -1,0 +1,23 @@
+{
+  "name": "quality_segment_specific_retrain",
+  "alert": {"source": "monitoring", "type": "quality", "model_name": "churn-predictor",
+            "detail": "AUC dropped to 0.72 for new-market segment; stable 0.89 elsewhere"},
+  "world": {
+    "summarize_metric_anomalies": {"anomalies": [
+      {"metric": "auc_segment_new_market", "baseline": 0.87, "current": 0.72, "zscore": 4.6, "window_start": "2026-07-05T00:00:00Z"},
+      {"metric": "auc_overall", "baseline": 0.89, "current": 0.87, "zscore": 1.1, "window_start": "2026-07-05T00:00:00Z"}]},
+    "get_deployment_history": {"deployments": [
+      {"version": "11", "stage": "Production", "deployed_at": "2026-05-20T08:00:00Z"}]},
+    "get_drift_report": {"overall_drift": true, "n_drifted": 5,
+      "top_drifted_features": [{"feature": "region_new_market_share", "psi": 0.33, "test": "PSI"}]}
+  },
+  "script": [
+    {"content": "{\"classification\": \"quality\"}"},
+    {"content": "", "tool_calls": [{"id": "t1", "name": "summarize_metric_anomalies", "args": {"model_name": "churn-predictor"}}]},
+    {"content": "", "tool_calls": [{"id": "t2", "name": "get_drift_report", "args": {"model_name": "churn-predictor"}}]},
+    {"content": "", "tool_calls": [{"id": "t3", "name": "get_deployment_history", "args": {"model_name": "churn-predictor"}}]},
+    {"content": "{\"diagnosis\": \"Quality collapse is isolated to the new-market segment (AUC 0.87->0.72) with drift in region features; overall AUC nearly stable and no recent deploy. The model underfits an emerging segment. Rollback has no valid target and would not help; retrain with representative new-market data.\", \"recommended_action\": \"retrain\", \"target_version\": null}"}
+  ],
+  "expect": {"classification": "quality", "required_tool_sequence": ["summarize_metric_anomalies", "open_incident"],
+             "terminal_action": "incident_opened", "approve": false}
+}

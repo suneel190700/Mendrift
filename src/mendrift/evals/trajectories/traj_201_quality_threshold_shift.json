@@ -1,0 +1,22 @@
+{
+  "name": "quality_recall_drop_precision_gain_threshold",
+  "alert": {"source": "monitoring", "type": "quality", "model_name": "fraud-scorer",
+            "detail": "recall dropped 0.94 to 0.88 while precision rose 0.79 to 0.90 this week"},
+  "world": {
+    "summarize_metric_anomalies": {"anomalies": [
+      {"metric": "recall", "baseline": 0.94, "current": 0.88, "zscore": 3.2, "window_start": "2026-07-14T00:00:00Z"},
+      {"metric": "precision", "baseline": 0.79, "current": 0.90, "zscore": 3.4, "window_start": "2026-07-14T00:00:00Z"}]},
+    "get_deployment_history": {"deployments": [
+      {"version": "14", "stage": "Production", "deployed_at": "2026-06-30T08:00:00Z"}]},
+    "get_drift_report": {"overall_drift": false, "n_drifted": 0, "top_drifted_features": []}
+  },
+  "script": [
+    {"content": "{\"classification\": \"quality\"}"},
+    {"content": "", "tool_calls": [{"id": "t1", "name": "summarize_metric_anomalies", "args": {"model_name": "fraud-scorer"}}]},
+    {"content": "", "tool_calls": [{"id": "t2", "name": "get_drift_report", "args": {"model_name": "fraud-scorer"}}]},
+    {"content": "", "tool_calls": [{"id": "t3", "name": "get_deployment_history", "args": {"model_name": "fraud-scorer"}}]},
+    {"content": "{\"diagnosis\": \"Recall fell as precision rose by a symmetric amount with no drift and no recent deploy: the decision threshold moved, not the model. This is a threshold-tuning issue; file an incident to restore the operating point. Rollback would not address a threshold config.\", \"recommended_action\": \"incident_only\", \"target_version\": null}"}
+  ],
+  "expect": {"classification": "quality", "required_tool_sequence": ["summarize_metric_anomalies", "open_incident"],
+             "terminal_action": "incident_opened", "approve": false}
+}

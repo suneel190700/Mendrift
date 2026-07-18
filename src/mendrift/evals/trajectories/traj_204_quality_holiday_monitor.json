@@ -1,0 +1,22 @@
+{
+  "name": "quality_holiday_effect_monitor",
+  "alert": {"source": "monitoring", "type": "quality", "model_name": "demand-forecaster",
+            "detail": "MAPE rose 8% to 12% over holiday week; recovering toward baseline"},
+  "world": {
+    "summarize_metric_anomalies": {"anomalies": [
+      {"metric": "mape", "baseline": 0.08, "current": 0.12, "zscore": 2.3, "window_start": "2026-07-04T00:00:00Z"}]},
+    "get_deployment_history": {"deployments": [
+      {"version": "9", "stage": "Production", "deployed_at": "2026-06-01T08:00:00Z"}]},
+    "get_drift_report": {"overall_drift": true, "n_drifted": 2,
+      "top_drifted_features": [{"feature": "holiday_flag", "psi": 0.22, "test": "PSI"}]}
+  },
+  "script": [
+    {"content": "{\"classification\": \"quality\"}"},
+    {"content": "", "tool_calls": [{"id": "t1", "name": "summarize_metric_anomalies", "args": {"model_name": "demand-forecaster"}}]},
+    {"content": "", "tool_calls": [{"id": "t2", "name": "get_drift_report", "args": {"model_name": "demand-forecaster"}}]},
+    {"content": "", "tool_calls": [{"id": "t3", "name": "get_deployment_history", "args": {"model_name": "demand-forecaster"}}]},
+    {"content": "{\"diagnosis\": \"MAPE rose modestly (8%->12%, z=2.3) concentrated in a holiday week, drift is on holiday_flag, and it is already recovering. Expected seasonal effect, no deploy involved, magnitude mild. Watch it rather than act.\", \"recommended_action\": \"monitor\", \"target_version\": null}"}
+  ],
+  "expect": {"classification": "quality", "required_tool_sequence": ["summarize_metric_anomalies"],
+             "terminal_action": "closed_monitoring", "approve": false}
+}

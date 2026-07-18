@@ -1,0 +1,104 @@
+{
+  "name": "quality_regression_from_deploy_rollback",
+  "alert": {
+    "source": "monitoring",
+    "type": "quality",
+    "model_name": "limit-optimizer",
+    "detail": "approval-accuracy fell 0.93 to 0.85 within 2h of v12 deploy"
+  },
+  "world": {
+    "summarize_metric_anomalies": {
+      "anomalies": []
+    },
+    "get_deployment_history": {
+      "deployments": [
+        {
+          "version": "12",
+          "stage": "Production",
+          "deployed_at": "2026-07-16T08:00:00Z"
+        },
+        {
+          "version": "11",
+          "stage": "Archived",
+          "deployed_at": "2026-07-01T09:00:00Z"
+        }
+      ]
+    },
+    "diff_deployments": {
+      "param_diffs": {
+        "learning_rate": [
+          "0.01",
+          "0.1"
+        ]
+      },
+      "metric_diffs": {
+        "val_accuracy": [
+          0.93,
+          0.86
+        ]
+      },
+      "schema_changes": []
+    },
+    "get_drift_report": {
+      "overall_drift": false,
+      "n_drifted": 0,
+      "top_drifted_features": []
+    }
+  },
+  "script": [
+    {
+      "content": "{\"classification\": \"quality\"}"
+    },
+    {
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "t1",
+          "name": "summarize_metric_anomalies",
+          "args": {
+            "model_name": "limit-optimizer"
+          }
+        }
+      ]
+    },
+    {
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "t2",
+          "name": "get_deployment_history",
+          "args": {
+            "model_name": "limit-optimizer"
+          }
+        }
+      ]
+    },
+    {
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "t3",
+          "name": "diff_deployments",
+          "args": {
+            "model_name": "limit-optimizer",
+            "version_a": "11",
+            "version_b": "12"
+          }
+        }
+      ]
+    },
+    {
+      "content": "{\"diagnosis\": \"Approval accuracy dropped 0.93->0.85 within 2h of v12, and the diff shows learning_rate raised 0.01->0.1 with val_accuracy already regressed 0.93->0.86 in offline eval. v12 is a bad release with affirmative deploy-linked evidence. Roll back to 11.\", \"recommended_action\": \"rollback\", \"target_version\": \"11\"}"
+    }
+  ],
+  "expect": {
+    "classification": "quality",
+    "required_tool_sequence": [
+      "summarize_metric_anomalies",
+      "diff_deployments",
+      "propose_rollback"
+    ],
+    "terminal_action": "resolved",
+    "approve": true
+  }
+}

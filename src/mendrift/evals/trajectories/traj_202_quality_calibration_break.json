@@ -1,0 +1,21 @@
+{
+  "name": "quality_calibration_broke_ranking_fine",
+  "alert": {"source": "monitoring", "type": "quality", "model_name": "credit-risk-v2",
+            "detail": "predicted probabilities miscalibrated; AUC unchanged at 0.91"},
+  "world": {
+    "summarize_metric_anomalies": {"anomalies": [
+      {"metric": "expected_calibration_error", "baseline": 0.02, "current": 0.11, "zscore": 4.0, "window_start": "2026-07-12T00:00:00Z"},
+      {"metric": "auc", "baseline": 0.91, "current": 0.91, "zscore": 0.1, "window_start": "2026-07-12T00:00:00Z"}]},
+    "get_deployment_history": {"deployments": [
+      {"version": "6", "stage": "Production", "deployed_at": "2026-06-15T08:00:00Z"}]},
+    "get_drift_report": {"overall_drift": false, "n_drifted": 0, "top_drifted_features": []}
+  },
+  "script": [
+    {"content": "{\"classification\": \"quality\"}"},
+    {"content": "", "tool_calls": [{"id": "t1", "name": "summarize_metric_anomalies", "args": {"model_name": "credit-risk-v2"}}]},
+    {"content": "", "tool_calls": [{"id": "t2", "name": "get_drift_report", "args": {"model_name": "credit-risk-v2"}}]},
+    {"content": "{\"diagnosis\": \"Calibration error jumped 0.02->0.11 while AUC held at 0.91: ranking quality intact, probability calibration broke. No drift, no recent deploy. Needs recalibration (Platt/isotonic), not a rollback that discards a well-ranking model.\", \"recommended_action\": \"incident_only\", \"target_version\": null}"}
+  ],
+  "expect": {"classification": "quality", "required_tool_sequence": ["summarize_metric_anomalies", "open_incident"],
+             "terminal_action": "incident_opened", "approve": false}
+}
