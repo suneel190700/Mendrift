@@ -1,3 +1,5 @@
+![test](https://github.com/suneel190700/mendrift/actions/workflows/test.yml/badge.svg)
+
 # Mendrift
 
 Autonomous MLOps incident response agent, plus **mendrift-mcp** — an open-source
