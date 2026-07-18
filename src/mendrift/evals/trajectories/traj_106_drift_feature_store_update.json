@@ -1,0 +1,26 @@
+{
+  "name": "drift_feature_store_update_not_model",
+  "alert": {"source": "evidently", "type": "drift", "model_name": "limit-optimizer",
+            "detail": "PSI 0.4 on 3 engineered features right after a feature-store release; model unchanged"},
+  "world": {
+    "get_drift_report": {"overall_drift": true, "n_drifted": 3,
+      "top_drifted_features": [{"feature": "rolling_spend_30d", "psi": 0.40, "test": "PSI"},
+                               {"feature": "utilization_ratio", "psi": 0.37, "test": "PSI"}]},
+    "get_deployment_history": {"deployments": [
+      {"version": "5", "stage": "Production", "deployed_at": "2026-06-25T10:00:00Z"}]},
+    "diff_deployments": {"param_diffs": {}, "metric_diffs": {}, "schema_changes": [],
+      "note": "model version unchanged; feature-store pipeline released new transform logic 2026-07-16"},
+    "summarize_metric_anomalies": {"anomalies": [
+      {"metric": "rolling_spend_30d_mean", "baseline": 1200, "current": 2600, "zscore": 5.5,
+       "window_start": "2026-07-16T12:00:00Z"}]}
+  },
+  "script": [
+    {"content": "{\"classification\": \"drift\"}"},
+    {"content": "", "tool_calls": [{"id": "t1", "name": "get_drift_report", "args": {"model_name": "limit-optimizer"}}]},
+    {"content": "", "tool_calls": [{"id": "t2", "name": "get_deployment_history", "args": {"model_name": "limit-optimizer"}}]},
+    {"content": "", "tool_calls": [{"id": "t3", "name": "diff_deployments", "args": {"model_name": "limit-optimizer", "version_a": "5", "version_b": "5"}}]},
+    {"content": "{\"diagnosis\": \"Model version unchanged (last deploy 3 weeks ago); drift hit engineered features exactly when the feature-store released new transform logic. Root cause is the feature pipeline, not the model. Rolling back the model would not help; escalate to the feature-store owners.\", \"recommended_action\": \"incident_only\", \"target_version\": null}"}
+  ],
+  "expect": {"classification": "drift", "required_tool_sequence": ["get_drift_report", "diff_deployments", "open_incident"],
+             "terminal_action": "incident_opened", "approve": false}
+}

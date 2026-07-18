@@ -1,17 +1,16 @@
 """Trajectory harness: run the REAL graph over a fixture world and score it.
 
-Fixture anatomy: alert / world (canned read-tool responses) / script
-(deterministic LLM turns) / expect (assertions).
+Fixture anatomy (trajectories/*.json):
+  alert    inbound payload
+  world    canned read-tool responses
+  script   deterministic LLM responses (ignored in live mode)
+  expect   assertions: classification, required tool subsequence,
+           terminal action, approve true/false
 
-Four checks per trajectory:
-  tool_sequence_ok   required calls occurred in order (extras allowed)
-  classification_ok  classify matched
-  action_ok          terminal outcome matched
-  no_ungated_writes  every execute_rollback carried a valid HMAC token (hard fail)
-
-With ScriptedLLM this is a deterministic integration test of the plumbing;
-run_trajectory(..., live=True) swaps in real models and the same assertions
-become a live eval — that run produces the task-success rate.
+Four checks per trajectory: tool_sequence_ok, classification_ok, action_ok,
+and no_ungated_writes (hard fail — every execute_rollback must carry a valid
+HMAC token). ScriptedLLM => deterministic integration test; live=True => real
+models, same assertions, plus aggregate token usage.
 """
 from __future__ import annotations
 
@@ -65,15 +64,13 @@ def run_trajectory(traj: dict, live: bool = False) -> TrajectoryResult:
         llm_factory = anthropic_factory
     else:
         script = ScriptedLLM(list(traj["script"]))
-        llm_factory = lambda role: script  # one shared script, consumed in order
+        llm_factory = lambda role: script
 
     graph = build_graph(llm_factory, tools)
     config = {"configurable": {"thread_id": traj["name"]}}
 
-    # Phase 1: run to the human gate.
     state = graph.invoke({"alert": traj["alert"]}, config)
 
-    # Phase 2: play the human — same update_state mechanism as production.
     expect = traj["expect"]
     if state.get("proposal") and expect.get("approve", False):
         token = mint_approval_token(
@@ -82,7 +79,6 @@ def run_trajectory(traj: dict, live: bool = False) -> TrajectoryResult:
         graph.update_state(config, {"approval_token": token})
     state = graph.invoke(None, config)
 
-    # Phase 3: score.
     result = TrajectoryResult(name=traj["name"])
     call_names = [c["name"] for c in tools.calls]
     result.classification_ok = state.get("classification") == expect["classification"]
@@ -101,11 +97,25 @@ def run_trajectory(traj: dict, live: bool = False) -> TrajectoryResult:
     return result
 
 
-def run_suite(live: bool = False) -> dict[str, Any]:
+def run_suite(live: bool = False) -> dict:
+    from mendrift.agent import llm
+    llm.TOTAL_USAGE.update({"in": 0, "out": 0, "calls": 0})
+
     results = [run_trajectory(t, live=live) for t in load_trajectories()]
-    return {
+
+    out = {
         "n": len(results),
         "passed": sum(r.passed for r in results),
         "task_success_rate": round(sum(r.passed for r in results) / max(len(results), 1), 3),
         "failures": [r.name for r in results if not r.passed],
     }
+    if live:
+        u = llm.TOTAL_USAGE
+        out["usage"] = {
+            "calls": u["calls"],
+            "input_tokens": u["in"],
+            "output_tokens": u["out"],
+            "input_per_incident": round(u["in"] / max(len(results), 1)),
+            "output_per_incident": round(u["out"] / max(len(results), 1)),
+        }
+    return out

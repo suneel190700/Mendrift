@@ -20,6 +20,14 @@ ROUTER_TABLE = {
     "verify": "claude-haiku-4-5-20251001",
 }
 
+TOTAL_USAGE = {"in": 0, "out": 0, "calls": 0}
+
+
+def _record(u: dict):
+    TOTAL_USAGE["in"] += u.get("in", 0)
+    TOTAL_USAGE["out"] += u.get("out", 0)
+    TOTAL_USAGE["calls"] += 1
+
 # Generous ceiling: a diagnosis narrative plus structured JSON must never be
 # truncated mid-object (truncated JSON silently falls back to incident_only).
 MAX_TOKENS = 4096
@@ -54,6 +62,7 @@ class AnthropicLLM:
 
         um = getattr(resp, "usage_metadata", None) or {}
         self.usage.append({"in": um.get("input_tokens", 0), "out": um.get("output_tokens", 0)})
+        _record(self.usage[-1])
 
         # Guard: a stop for length means the reply (and any JSON in it) is
         # likely cut off. Warn loudly — this is the failure that silently

@@ -1,0 +1,26 @@
+{
+  "name": "drift_deploy_but_docs_only_change",
+  "alert": {"source": "evidently", "type": "drift", "model_name": "aml-screener",
+            "detail": "PSI 0.29 on 5 features, 6h after v8 deploy"},
+  "world": {
+    "get_drift_report": {"overall_drift": true, "n_drifted": 5,
+      "top_drifted_features": [{"feature": "txn_velocity", "psi": 0.29, "test": "PSI"}]},
+    "get_deployment_history": {"deployments": [
+      {"version": "8", "stage": "Production", "deployed_at": "2026-07-16T08:00:00Z"},
+      {"version": "7", "stage": "Archived", "deployed_at": "2026-07-01T09:00:00Z"}]},
+    "diff_deployments": {"param_diffs": {}, "metric_diffs": {},
+      "schema_changes": [], "other_changes": ["docstring/comment updates only"]},
+    "summarize_metric_anomalies": {"anomalies": [
+      {"metric": "txn_velocity_mean", "baseline": 3.1, "current": 4.4, "zscore": 3.0,
+       "window_start": "2026-07-16T14:00:00Z"}]}
+  },
+  "script": [
+    {"content": "{\"classification\": \"drift\"}"},
+    {"content": "", "tool_calls": [{"id": "t1", "name": "get_drift_report", "args": {"model_name": "aml-screener"}}]},
+    {"content": "", "tool_calls": [{"id": "t2", "name": "get_deployment_history", "args": {"model_name": "aml-screener"}}]},
+    {"content": "", "tool_calls": [{"id": "t3", "name": "diff_deployments", "args": {"model_name": "aml-screener", "version_a": "7", "version_b": "8"}}]},
+    {"content": "{\"diagnosis\": \"Drift correlates in time with v8, but the diff shows only docstring/comment changes — no params, metrics, or schema changed. v8 is not the cause; real input shift in txn_velocity. Investigate data source.\", \"recommended_action\": \"incident_only\", \"target_version\": null}"}
+  ],
+  "expect": {"classification": "drift", "required_tool_sequence": ["get_drift_report", "diff_deployments", "open_incident"],
+             "terminal_action": "incident_opened", "approve": false}
+}

@@ -1,0 +1,22 @@
+{
+  "name": "drift_seasonal_monitor",
+  "alert": {"source": "evidently", "type": "drift", "model_name": "demand-forecaster",
+            "detail": "PSI 0.18 across 4 features, gradual over 3 weeks; no deploy in 6 weeks"},
+  "world": {
+    "get_drift_report": {"overall_drift": true, "n_drifted": 4,
+      "top_drifted_features": [{"feature": "weekly_seasonality_index", "psi": 0.18, "test": "PSI"},
+                               {"feature": "day_of_week", "psi": 0.16, "test": "PSI"}]},
+    "get_deployment_history": {"deployments": [
+      {"version": "9", "stage": "Production", "deployed_at": "2026-06-01T10:00:00Z"}]},
+    "summarize_metric_anomalies": {"anomalies": []}
+  },
+  "script": [
+    {"content": "{\"classification\": \"drift\"}"},
+    {"content": "", "tool_calls": [{"id": "t1", "name": "get_drift_report", "args": {"model_name": "demand-forecaster"}}]},
+    {"content": "", "tool_calls": [{"id": "t2", "name": "summarize_metric_anomalies", "args": {"model_name": "demand-forecaster"}}]},
+    {"content": "", "tool_calls": [{"id": "t3", "name": "get_deployment_history", "args": {"model_name": "demand-forecaster"}}]},
+    {"content": "{\"diagnosis\": \"Mild gradual drift (PSI 0.18) on seasonality features, no deploy in 6 weeks, metrics within bounds. Seasonal pattern shift, not a regression.\", \"recommended_action\": \"monitor\", \"target_version\": null}"}
+  ],
+  "expect": {"classification": "drift", "required_tool_sequence": ["get_drift_report", "get_deployment_history"],
+             "terminal_action": "closed_monitoring", "approve": false}
+}

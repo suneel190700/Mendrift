@@ -1,0 +1,23 @@
+{
+  "name": "label_shift_retrain",
+  "alert": {"source": "evidently", "type": "drift", "model_name": "churn-predictor",
+            "detail": "target/prediction distribution shifted; input features stable"},
+  "world": {
+    "get_drift_report": {"overall_drift": true, "n_drifted": 0, "prediction_drift": true,
+      "top_drifted_features": [], "note": "feature distributions stable; predicted-class ratio shifted 0.22->0.34"},
+    "get_deployment_history": {"deployments": [
+      {"version": "11", "stage": "Production", "deployed_at": "2026-05-20T10:00:00Z"}]},
+    "summarize_metric_anomalies": {"anomalies": [
+      {"metric": "predicted_churn_rate", "baseline": 0.22, "current": 0.34, "zscore": 4.5,
+       "window_start": "2026-07-10T00:00:00Z"}]}
+  },
+  "script": [
+    {"content": "{\"classification\": \"drift\"}"},
+    {"content": "", "tool_calls": [{"id": "t1", "name": "get_drift_report", "args": {"model_name": "churn-predictor"}}]},
+    {"content": "", "tool_calls": [{"id": "t2", "name": "summarize_metric_anomalies", "args": {"model_name": "churn-predictor"}}]},
+    {"content": "", "tool_calls": [{"id": "t3", "name": "get_deployment_history", "args": {"model_name": "churn-predictor"}}]},
+    {"content": "{\"diagnosis\": \"Feature distributions are stable but the predicted-class ratio shifted 0.22->0.34 with no recent deploy: label/concept drift, not feature drift or a bad release. Rollback has no valid target; the model needs retraining on current-labeled data.\", \"recommended_action\": \"retrain\", \"target_version\": null}"}
+  ],
+  "expect": {"classification": "drift", "required_tool_sequence": ["get_drift_report", "open_incident"],
+             "terminal_action": "incident_opened", "approve": false}
+}

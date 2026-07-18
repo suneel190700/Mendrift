@@ -1,0 +1,20 @@
+{
+  "name": "drift_low_importance_feature_monitor",
+  "alert": {"source": "evidently", "type": "drift", "model_name": "credit-risk-v2",
+            "detail": "PSI 0.34 on branch_code (rank 41/42); investigate whether actionable"},
+  "world": {
+    "get_drift_report": {"overall_drift": true, "n_drifted": 1,
+      "top_drifted_features": [{"feature": "branch_code", "psi": 0.34, "test": "PSI", "importance_rank": 41}]},
+    "get_deployment_history": {"deployments": [
+      {"version": "6", "stage": "Production", "deployed_at": "2026-06-10T10:00:00Z"}]},
+    "summarize_metric_anomalies": {"anomalies": []}
+  },
+  "script": [
+    {"content": "{\"classification\": \"drift\"}"},
+    {"content": "", "tool_calls": [{"id": "t1", "name": "get_drift_report", "args": {"model_name": "credit-risk-v2"}}]},
+    {"content": "", "tool_calls": [{"id": "t2", "name": "summarize_metric_anomalies", "args": {"model_name": "credit-risk-v2"}}]},
+    {"content": "{\"diagnosis\": \"Drift isolated to branch_code (importance rank 41 of 42), overall metrics stable, no deploy correlation. Low-impact drift; watch it.\", \"recommended_action\": \"monitor\", \"target_version\": null}"}
+  ],
+  "expect": {"classification": "drift", "required_tool_sequence": ["get_drift_report"],
+             "terminal_action": "closed_monitoring", "approve": false}
+}

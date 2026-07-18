@@ -1,0 +1,23 @@
+{
+  "name": "drift_upstream_schema_rename",
+  "alert": {"source": "evidently", "type": "drift", "model_name": "fraud-scorer",
+            "detail": "single feature merchant_zip 100% null since 02:00; no deploy"},
+  "world": {
+    "get_drift_report": {"overall_drift": true, "n_drifted": 1,
+      "top_drifted_features": [{"feature": "merchant_zip", "psi": 0.95, "test": "PSI"}]},
+    "get_deployment_history": {"deployments": [
+      {"version": "14", "stage": "Production", "deployed_at": "2026-07-02T08:05:00Z"}]},
+    "summarize_metric_anomalies": {"anomalies": [
+      {"metric": "null_rate_merchant_zip", "baseline": 0.0, "current": 1.0, "zscore": 12.0,
+       "window_start": "2026-07-17T02:00:00Z"}]}
+  },
+  "script": [
+    {"content": "{\"classification\": \"drift\"}"},
+    {"content": "", "tool_calls": [{"id": "t1", "name": "get_drift_report", "args": {"model_name": "fraud-scorer"}}]},
+    {"content": "", "tool_calls": [{"id": "t2", "name": "summarize_metric_anomalies", "args": {"model_name": "fraud-scorer"}}]},
+    {"content": "", "tool_calls": [{"id": "t3", "name": "get_deployment_history", "args": {"model_name": "fraud-scorer"}}]},
+    {"content": "{\"diagnosis\": \"Single feature merchant_zip went 100% null at 02:00 with no deploy (last deploy 15 days prior). Upstream column rename or schema break in the data source, not a model issue.\", \"recommended_action\": \"incident_only\", \"target_version\": null}"}
+  ],
+  "expect": {"classification": "drift", "required_tool_sequence": ["get_drift_report", "open_incident"],
+             "terminal_action": "incident_opened", "approve": false}
+}

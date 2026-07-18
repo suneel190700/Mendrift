@@ -45,12 +45,15 @@ Evidence rules:
 - A recent deploy plus an unverified alert is correlation, not evidence.
 - If key evidence tools fail or return errors, do NOT recommend destructive
   actions — recommend incident_only and say what could not be verified.
+- If drift or degradation is real but mild, not deploy-linked, and metrics
+  remain within acceptable bounds (no metric anomaly with |z|>2.5),
+  recommend monitor (watch, do not act); an active anomaly warrants an incident.
 
 When you are confident, respond WITHOUT tool calls, with ONLY this JSON
 (keep the diagnosis to 2-4 sentences citing specific evidence — be concise,
 a long narrative risks truncation):
 {"diagnosis": "<root-cause narrative, 2-4 sentences citing specific evidence>",
- "recommended_action": "<rollback|retrain|incident_only|none>",
+ "recommended_action": "<rollback|retrain|monitor|incident_only|none>",
  "target_version": "<version to roll back to, or null>"}"""
 
 VERIFY_PROMPT = """Post-remediation check. Given these fresh serving metrics, answer
@@ -133,6 +136,9 @@ def make_nodes(llm_factory, tools):
                 "reason": state.get("diagnosis", ""),
             })
             return {"proposal": proposal, "outcome": None}
+
+        if action == "monitor":
+            return {"proposal": None, "outcome": "closed_monitoring"}
 
         if action in ("retrain", "incident_only"):
             incident = tools.call("open_incident", {
