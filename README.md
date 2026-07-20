@@ -7,17 +7,25 @@
 Autonomous MLOps incident response agent, plus **mendrift-mcp** — an open-source
 MCP server for drift detection and ML incident tooling.
 
+```bash
+pip install mendrift-mcp     # or: uvx mendrift-mcp
+```
+
+Published on [PyPI](https://pypi.org/project/mendrift-mcp/) and the
+[MCP Registry](https://registry.modelcontextprotocol.io) as
+`io.github.suneel190700/mendrift-mcp`.
+
 When a production model drifts or degrades, Mendrift detects it, diagnoses the
 root cause from monitoring and registry evidence, proposes a remediation, and
 executes it **only after human approval**.
 
-````
+```
 alert ──> classify ──> diagnose (MCP tools) ──> propose
              │                                     │
            noise ──> close               human approval gate
                                                    │
                                     execute ──> verify recovery
-````
+```
 
 Built with LangGraph (agent orchestration), LangChain (`ChatAnthropic` +
 `bind_tools`), the Model Context Protocol, Evidently, MLflow, and Claude
@@ -97,14 +105,14 @@ acted on.
   a rollback clears it, ordinary data shift does not
 - an approved `execute_rollback` moves the `production` alias for real
 
-````bash
+```bash
 uv run mlflow server --host 127.0.0.1 --port 5001        # separate terminal
 PYTHONPATH=src uv run python scripts/seed_demo.py
 
 rm -f demo.db
 MENDRIFT_DEMO=0 PYTHONPATH=src uv run python scripts/demo_interrupt.py start
 MENDRIFT_DEMO=0 PYTHONPATH=src uv run python scripts/demo_interrupt.py approve
-````
+```
 
 A live run diagnoses from computed evidence — e.g. *"v2 introduced a schema swap
 replacing promo_flag with promo_flag_v2 … label_noise 0.0 → 0.45 collapsing
@@ -141,10 +149,10 @@ its own evidence shape and correct action:
 
 Scripted for fast CI, live for the measured rate:
 
-````bash
+```bash
 PYTHONPATH=src uv run python scripts/run_traj.py --all          # scripted, fast
 PYTHONPATH=src uv run python scripts/run_traj.py --all --live   # real models
-````
+```
 
 Live-model eval runs at ~95% task-success; the handful of run-to-run
 divergences reflect LLM eval variance on decision-margin scenarios. The live
@@ -155,21 +163,21 @@ at its own layer (parser, alert wording, evidence-rule prompt).
 
 ## Quickstart (demo mode)
 
-````bash
+```bash
 uv sync
 MENDRIFT_DEMO=1 uv run mendrift-mcp     # stdio MCP server with fixture data
 PYTHONPATH=src uv run pytest -v         # gate + trajectory suite
-````
+```
 
 Claude Desktop config:
 
-````json
+```json
 {"mcpServers": {"mendrift": {
-  "command": "uv",
-  "args": ["--directory", "/path/to/mendrift", "run", "mendrift-mcp"],
+  "command": "uvx",
+  "args": ["mendrift-mcp"],
   "env": {"MENDRIFT_DEMO": "1"}
 }}}
-````
+```
 
 ## Status
 
@@ -181,4 +189,8 @@ Claude Desktop config:
 - [x] 19-scenario trajectory eval across the decision space; ~95% live, zero ungated writes
 - [x] CI: gate + trajectory suite on every push
 - [x] live mode: real Evidently drift computation, MLflow registry history/diff, real alias rollback
-- [ ] publish: PyPI + MCP community servers registry
+- [x] published: PyPI (`pip install mendrift-mcp`) + MCP Registry (`io.github.suneel190700/mendrift-mcp`)
+
+## License
+
+MIT
