@@ -105,6 +105,10 @@ def main() -> None:
     # Drift frames for Evidently (schema rename included).
     reference = make_frame(6000, shifted=False, promo_col=PROMO_OLD)
     current = make_frame(6000, shifted=True, promo_col=PROMO_NEW)
+    # Raw storage keeps the old column alongside the new one — a schema swap in
+    # the model's feature list does not delete history upstream. This is what
+    # lets a rolled-back model resume scoring the current window.
+    current[PROMO_OLD] = current[PROMO_NEW]
     reference.to_parquet(DATA_DIR / "reference.parquet")
     current.to_parquet(DATA_DIR / "current.parquet")
     print(f"wrote {DATA_DIR}/reference.parquet and current.parquet")

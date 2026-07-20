@@ -5,11 +5,16 @@ description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
     "anthropic>=0.116.0",
+    "evidently>=0.7.21",
     "langchain-anthropic>=1.4.8",
     "langchain-core>=1.4.9",
     "langgraph>=1.2.9",
     "langgraph-checkpoint-sqlite>=3.1.0",
     "mcp>=1.28.1",
+    "mlflow>=3.14.0",
+    "pandas>=2.3.3",
+    "pyarrow>=24.0.0",
+    "scikit-learn>=1.9.0",
 ]
 
 [dependency-groups]

@@ -55,7 +55,13 @@ def execute_rollback(model_name: str, target_version: str, approval_token: str) 
     if os.environ.get("MENDRIFT_DEMO", "0") == "1":
         Path("/tmp/mendrift_rollback_marker").write_text(f"{model_name}:{target_version}")
 
-    # TODO(live mode): MlflowClient().transition_model_version_stage(...)
+    if os.environ.get("MENDRIFT_DEMO", "0") != "1":
+        import mlflow
+        from mlflow import MlflowClient
+
+        mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5001"))
+        client = MlflowClient()
+        client.set_registered_model_alias(model_name, "production", target_version)
     return {
         "status": "executed",
         "model_name": model_name,
