@@ -9,24 +9,25 @@ When a production model drifts or degrades, Mendrift detects it, diagnoses the
 root cause from monitoring and registry evidence, proposes a remediation, and
 executes it **only after human approval**.
 
-```
+````
 alert ──> classify ──> diagnose (MCP tools) ──> propose
              │                                     │
            noise ──> close               human approval gate
                                                    │
                                     execute ──> verify recovery
-```
+````
 
 Built with LangGraph (agent orchestration), LangChain (`ChatAnthropic` +
-`bind_tools`), the Model Context Protocol, and Claude (Haiku + Sonnet).
+`bind_tools`), the Model Context Protocol, Evidently, MLflow, and Claude
+(Haiku + Sonnet).
 
 ## mendrift-mcp tools
 
 | tool | type | purpose |
 |---|---|---|
-| `get_drift_report` | read | per-feature PSI/KS drift, top offenders |
-| `summarize_metric_anomalies` | read | latency / error-rate / prediction-shift anomalies, z-scored |
-| `get_deployment_history` | read | recent version transitions |
+| `get_drift_report` | read | per-feature drift distances + schema changes (Evidently) |
+| `summarize_metric_anomalies` | read | production vs previous model scored on current traffic |
+| `get_deployment_history` | read | registry version transitions and aliases |
 | `diff_deployments` | read | params / metrics / feature-schema diff between versions |
 | `propose_rollback` | read | generates a reviewable rollback plan |
 | `execute_rollback` | **gated** | requires a single-use HMAC `approval_token` |
@@ -77,13 +78,39 @@ specific deployment, never on deploy-correlation alone. The agent can also
 recommend **monitor** — real but mild, non-actionable drift is watched, not
 acted on.
 
-Run a full incident end to end against real models:
+## Live mode
 
-```bash
+`MENDRIFT_DEMO=0` runs the agent against real infrastructure rather than fixtures:
+
+- `scripts/seed_demo.py` trains two sklearn versions into a local MLflow registry —
+  v13 clean, v14 with a schema swap and a training window polluted by missed-fraud
+  labels (recall 0.72 → 0.18, AUC 0.84 → 0.82) — and writes reference/current frames
+- `get_drift_report` runs Evidently's `DataDriftPreset` over those frames, returning
+  real Wasserstein/JS distances against per-metric thresholds, plus schema changes
+  derived from actual column sets
+- `get_deployment_history` / `diff_deployments` read the registry and the underlying
+  runs — real aliases, params, metrics
+- `summarize_metric_anomalies` scores the current window with both the production and
+  previous versions, so it reports **model** divergence rather than population drift —
+  a rollback clears it, ordinary data shift does not
+- an approved `execute_rollback` moves the `production` alias for real
+
+````bash
+uv run mlflow server --host 127.0.0.1 --port 5001        # separate terminal
+PYTHONPATH=src uv run python scripts/seed_demo.py
+
 rm -f demo.db
-PYTHONPATH=src uv run python scripts/demo_interrupt.py start    # Sonnet diagnoses, halts at gate
-PYTHONPATH=src uv run python scripts/demo_interrupt.py approve  # resumes -> resolved
-```
+MENDRIFT_DEMO=0 PYTHONPATH=src uv run python scripts/demo_interrupt.py start
+MENDRIFT_DEMO=0 PYTHONPATH=src uv run python scripts/demo_interrupt.py approve
+````
+
+A live run diagnoses from computed evidence — e.g. *"v2 introduced a schema swap
+replacing promo_flag with promo_flag_v2 … label_noise 0.0 → 0.45 collapsing
+val_recall 0.724 → 0.176 … 79.7% prediction-rate divergence from the prior version,
+model-induced, not population drift"* — then halts for approval and resolves.
+
+The eval suite deliberately stays on fixtures: evals need determinism and zero cost
+in CI, while live mode exercises the real stack.
 
 ## Evaluation
 
@@ -112,10 +139,10 @@ its own evidence shape and correct action:
 
 Scripted for fast CI, live for the measured rate:
 
-```bash
+````bash
 PYTHONPATH=src uv run python scripts/run_traj.py --all          # scripted, fast
 PYTHONPATH=src uv run python scripts/run_traj.py --all --live   # real models
-```
+````
 
 Live-model eval runs at ~95% task-success; the handful of run-to-run
 divergences reflect LLM eval variance on decision-margin scenarios. The live
@@ -126,29 +153,30 @@ at its own layer (parser, alert wording, evidence-rule prompt).
 
 ## Quickstart (demo mode)
 
-```bash
+````bash
 uv sync
 MENDRIFT_DEMO=1 uv run mendrift-mcp     # stdio MCP server with fixture data
 PYTHONPATH=src uv run pytest -v         # gate + trajectory suite
-```
+````
 
 Claude Desktop config:
 
-```json
+````json
 {"mcpServers": {"mendrift": {
   "command": "uv",
   "args": ["--directory", "/path/to/mendrift", "run", "mendrift-mcp"],
   "env": {"MENDRIFT_DEMO": "1"}
 }}}
-```
+````
 
 ## Status
 
 - [x] mendrift-mcp server over stdio, verified in MCP Inspector and Claude Desktop
-- [x] four read tools with demo-mode fixtures (`MENDRIFT_DEMO=1`)
+- [x] seven tools with a read / gated / write permission taxonomy
 - [x] HMAC-gated rollback with action-scoped single-use tokens (tests first)
 - [x] LangGraph incident graph: SQLite checkpointing + human-approval interrupt, kill-resume proven
 - [x] LLM nodes on LangChain (`ChatAnthropic.bind_tools`): Haiku classify/verify, Sonnet diagnose loop
 - [x] 19-scenario trajectory eval across the decision space; ~95% live, zero ungated writes
-- [ ] live mode: Evidently drift computation, MLflow registry via community mlflow-mcp
-- [ ] publish: CI, PyPI + MCP community servers registry
+- [x] CI: gate + trajectory suite on every push
+- [x] live mode: real Evidently drift computation, MLflow registry history/diff, real alias rollback
+- [ ] publish: PyPI + MCP community servers registry
