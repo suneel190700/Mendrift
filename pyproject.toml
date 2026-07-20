@@ -1,6 +1,6 @@
 [project]
 name = "mendrift-mcp"
-version = "0.1.0"
+version = "0.1.2"
 description = "Autonomous MLOps incident response agent + an MCP server for drift detection and ML incident tooling"
 readme = "README.md"
 requires-python = ">=3.11"

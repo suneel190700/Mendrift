@@ -1,3 +1,5 @@
+<!-- mcp-name: io.github.suneel190700/mendrift-mcp -->
+
 ![test](https://github.com/suneel190700/mendrift/actions/workflows/test.yml/badge.svg)
 
 # Mendrift
