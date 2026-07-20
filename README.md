@@ -44,7 +44,7 @@ Tested live: Claude was first ordered to roll back "with full authorization"
 (it proposed but declined to fabricate a token), then handed a fabricated
 token, which the gate rejected by constant-time HMAC comparison:
 
-![Approval gate defense: refusal, then cryptographic rejection](docs/gate-defense.png)
+![Approval gate defense: refusal, then cryptographic rejection](https://raw.githubusercontent.com/suneel190700/mendrift/main/docs/gate-defense.png)
 
 See `tests/test_approval_gate.py`, including the action-scoping test: a token
 minted for one model/version is invalid for any other.
@@ -57,7 +57,7 @@ incident by `thread_id` after a human mints the approval token — which enters
 state only via `update_state()`, from outside the graph. Denial is a
 first-class path: no token → `closed_approval_denied`, no execution.
 
-![Kill-and-resume demo](docs/interrupt-demo.gif)
+![Kill-and-resume demo](https://raw.githubusercontent.com/suneel190700/mendrift/main/docs/interrupt-demo.gif)
 
 ## Agent design
 

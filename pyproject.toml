@@ -1,21 +1,38 @@
 [project]
-name = "mendrift"
+name = "mendrift-mcp"
 version = "0.1.0"
-description = "Add your description here"
+description = "Autonomous MLOps incident response agent + an MCP server for drift detection and ML incident tooling"
+readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+keywords = ["mcp", "mlops", "drift-detection", "llm-agent", "mlflow", "evidently"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "anthropic>=0.116.0",
-    "evidently>=0.7.21",
-    "langchain-anthropic>=1.4.8",
-    "langchain-core>=1.4.9",
+    "evidently>=0.7",
+    "langchain-anthropic>=0.3",
+    "langchain-core>=0.3",
     "langgraph>=1.2.9",
-    "langgraph-checkpoint-sqlite>=3.1.0",
+    "langgraph-checkpoint-sqlite>=2.0",
     "mcp>=1.28.1",
-    "mlflow>=3.14.0",
-    "pandas>=2.3.3",
-    "pyarrow>=24.0.0",
-    "scikit-learn>=1.9.0",
+    "mlflow>=3.0",
+    "pandas>=2.0",
+    "pyarrow>=15.0",
+    "scikit-learn>=1.4",
 ]
+
+[project.urls]
+Homepage = "https://github.com/suneel190700/mendrift"
+Repository = "https://github.com/suneel190700/mendrift"
+Issues = "https://github.com/suneel190700/mendrift/issues"
+
+[project.scripts]
+mendrift-mcp = "mendrift_mcp.server:main"
 
 [dependency-groups]
 dev = [
@@ -23,12 +40,12 @@ dev = [
     "ruff>=0.15.21",
 ]
 
-[project.scripts]
-mendrift-mcp = "mendrift_mcp.server:main"
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mendrift_mcp", "src/mendrift"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["docs/", "data/", "mlruns/", "mlartifacts/", "*.db", "dist/"]

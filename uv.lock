@@ -1903,7 +1903,7 @@ wheels = [
 ]
 
 [[package]]
-name = "mendrift"
+name = "mendrift-mcp"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
@@ -1929,16 +1929,16 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=0.116.0" },
-    { name = "evidently", specifier = ">=0.7.21" },
-    { name = "langchain-anthropic", specifier = ">=1.4.8" },
-    { name = "langchain-core", specifier = ">=1.4.9" },
+    { name = "evidently", specifier = ">=0.7" },
+    { name = "langchain-anthropic", specifier = ">=0.3" },
+    { name = "langchain-core", specifier = ">=0.3" },
     { name = "langgraph", specifier = ">=1.2.9" },
-    { name = "langgraph-checkpoint-sqlite", specifier = ">=3.1.0" },
+    { name = "langgraph-checkpoint-sqlite", specifier = ">=2.0" },
     { name = "mcp", specifier = ">=1.28.1" },
-    { name = "mlflow", specifier = ">=3.14.0" },
-    { name = "pandas", specifier = ">=2.3.3" },
-    { name = "pyarrow", specifier = ">=24.0.0" },
-    { name = "scikit-learn", specifier = ">=1.9.0" },
+    { name = "mlflow", specifier = ">=3.0" },
+    { name = "pandas", specifier = ">=2.0" },
+    { name = "pyarrow", specifier = ">=15.0" },
+    { name = "scikit-learn", specifier = ">=1.4" },
 ]
 
 [package.metadata.requires-dev]
