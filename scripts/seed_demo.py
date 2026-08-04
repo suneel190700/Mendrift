@@ -22,7 +22,11 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import recall_score, roc_auc_score
 
-TRACKING_URI = "http://127.0.0.1:5001"
+import os
+TRACKING_URI = os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5001")
+# Local artifact root so models save as plain files that load without a server:
+from pathlib import Path as _P
+ARTIFACT_ROOT = _P(os.environ.get("MENDRIFT_ARTIFACT_ROOT", "mlruns")).resolve().as_uri()
 MODEL_NAME = "fraud-scorer"
 DATA_DIR = Path("data")
 PROMO_OLD = "promo_flag"
@@ -99,6 +103,8 @@ def train_and_log(train_df: pd.DataFrame, eval_df: pd.DataFrame, run_name: str,
 
 def main() -> None:
     mlflow.set_tracking_uri(TRACKING_URI)
+    if mlflow.get_experiment_by_name("fraud-scorer") is None:
+        mlflow.create_experiment("fraud-scorer", artifact_location=ARTIFACT_ROOT)
     mlflow.set_experiment("fraud-scorer")
     DATA_DIR.mkdir(exist_ok=True)
 

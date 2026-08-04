@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: mendrift-demo
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements-web.txt && pip install -e .
+    startCommand: bash start.sh
+    healthCheckPath: /api/health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: DEMO_RATE_MAX
+        value: "8"
+      - key: DEMO_DAILY_CAP
+        value: "300"
+    disk:
+      name: mlflow-store
+      mountPath: /opt/render/project/src
+      sizeGB: 1
