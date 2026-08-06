@@ -15,7 +15,3 @@ services:
         value: "8"
       - key: DEMO_DAILY_CAP
         value: "300"
-    disk:
-      name: mlflow-store
-      mountPath: /opt/render/project/src
-      sizeGB: 1
