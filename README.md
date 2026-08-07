@@ -15,6 +15,11 @@ Published on [PyPI](https://pypi.org/project/mendrift-mcp/) and the
 [MCP Registry](https://registry.modelcontextprotocol.io) as
 `io.github.suneel190700/mendrift-mcp`.
 
+**▶ [Live demo](https://mendrift-demo.onrender.com)** — run a real incident in your
+browser: supply an alert, watch the agent diagnose it against a real MLflow registry,
+and approve or reject the rollback at the human-in-the-loop gate. React frontend on a
+FastAPI backend; the free tier sleeps, so the first load may take ~40s to wake.
+
 When a production model drifts or degrades, Mendrift detects it, diagnoses the
 root cause from monitoring and registry evidence, proposes a remediation, and
 executes it **only after human approval**.
@@ -122,6 +127,33 @@ model-induced, not population drift"* — then halts for approval and resolves.
 The eval suite deliberately stays on fixtures: evals need determinism and zero cost
 in CI, while live mode exercises the real stack.
 
+## Live web demo
+
+A hosted web app wraps live mode behind a browser UI: a **React (Vite)** frontend on
+a **FastAPI** backend, deployed on Render. A visitor submits an alert, the frontend
+posts it to `/api/diagnose`, and the backend runs the real LangGraph agent — live
+Claude reasoning over an embedded MLflow registry (`sqlite://`, seeded on boot) — then
+halts at the HMAC gate. Approve or reject at the gate and the backend resumes the graph
+via `/api/decision`, executing a real alias rollback and verifying recovery. The
+Anthropic key lives only on the server; runs are rate-limited since each calls a real
+model. Try it: **[mendrift-demo.onrender.com](https://mendrift-demo.onrender.com)**.
+
+Run the web app locally:
+
+```bash
+# 1. build the React frontend (FastAPI serves the built assets)
+cd frontend && npm install && npm run build && cd ..
+
+# 2. seed the registry once, then start the backend (frontend + API on one port)
+export ANTHROPIC_API_KEY=sk-ant-...
+export MLFLOW_TRACKING_URI="sqlite:///$(pwd)/mlflow.db"
+PYTHONPATH=src uv run python scripts/seed_demo.py
+PYTHONPATH=src uv run uvicorn app.main:app --port 8000     # open http://localhost:8000
+```
+
+For frontend development with hot reload, run `cd frontend && npm run dev` (port 5173);
+Vite proxies `/api` to the backend on port 8000.
+
 ## Evaluation
 
 `src/mendrift/evals/` replays synthetic incident trajectories against the
@@ -189,6 +221,7 @@ Claude Desktop config:
 - [x] 19-scenario trajectory eval across the decision space; ~95% live, zero ungated writes
 - [x] CI: gate + trajectory suite on every push
 - [x] live mode: real Evidently drift computation, MLflow registry history/diff, real alias rollback
+- [x] live web demo: React + Vite frontend on FastAPI, deployed on Render
 - [x] published: PyPI (`pip install mendrift-mcp`) + MCP Registry (`io.github.suneel190700/mendrift-mcp`)
 
 ## License
