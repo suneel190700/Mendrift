@@ -161,4 +161,4 @@ def decision(body: Decision) -> JSONResponse:
     })
 
 
-app.mount("/", StaticFiles(directory=str(REPO_ROOT / "static"), html=True), name="static")
+app.mount("/", StaticFiles(directory=str(REPO_ROOT / "frontend" / "dist"), html=True), name="static")

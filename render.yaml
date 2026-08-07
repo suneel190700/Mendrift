@@ -3,7 +3,9 @@ services:
     name: mendrift-demo
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements-web.txt && pip install -e .
+    buildCommand: |
+      pip install -r requirements-web.txt && pip install -e .
+      cd frontend && npm install && npm run build && cd ..
     startCommand: bash start.sh
     healthCheckPath: /api/health
     envVars:
