@@ -17,8 +17,9 @@ Published on [PyPI](https://pypi.org/project/mendrift-mcp/) and the
 
 **▶ [Live demo](https://mendrift-demo.onrender.com)** — run a real incident in your
 browser: supply an alert, watch the agent diagnose it against a real MLflow registry,
-and approve or reject the rollback at the human-in-the-loop gate. React frontend on a
-FastAPI backend; the free tier sleeps, so the first load may take ~40s to wake.
+and approve or reject the rollback at the human-in-the-loop gate. Toggle between a
+crafted synthetic scenario and **real US consumer-credit benchmark data**. React
+frontend on a FastAPI backend; the free tier sleeps, so the first load may take ~40s.
 
 When a production model drifts or degrades, Mendrift detects it, diagnoses the
 root cause from monitoring and registry evidence, proposes a remediation, and
@@ -127,16 +128,37 @@ model-induced, not population drift"* — then halts for approval and resolves.
 The eval suite deliberately stays on fixtures: evals need determinism and zero cost
 in CI, while live mode exercises the real stack.
 
-## Live web demo
+## Live web demo (two worlds)
 
 A hosted web app wraps live mode behind a browser UI: a **React (Vite)** frontend on
 a **FastAPI** backend, deployed on Render. A visitor submits an alert, the frontend
 posts it to `/api/diagnose`, and the backend runs the real LangGraph agent — live
 Claude reasoning over an embedded MLflow registry (`sqlite://`, seeded on boot) — then
-halts at the HMAC gate. Approve or reject at the gate and the backend resumes the graph
-via `/api/decision`, executing a real alias rollback and verifying recovery. The
-Anthropic key lives only on the server; runs are rate-limited since each calls a real
-model. Try it: **[mendrift-demo.onrender.com](https://mendrift-demo.onrender.com)**.
+halts at the HMAC gate. Approve or reject and the backend resumes the graph via
+`/api/decision`, executing a real alias rollback and verifying recovery. The Anthropic
+key lives only on the server; runs are rate-limited since each calls a real model.
+Try it: **[mendrift-demo.onrender.com](https://mendrift-demo.onrender.com)**.
+
+The dashboard toggles between two seeded worlds, so the same agent can be seen against
+both a crafted scenario and genuine real-world data:
+
+- **Synthetic** (`scripts/seed_demo.py`, model `fraud-scorer`) — the crafted schema-swap
+  incident: clean, teachable, an unambiguous rollback story.
+- **Real US credit** (`scripts/seed_real.py`, model `credit-risk`) — the
+  [Give Me Some Credit](https://www.openml.org/search?type=data&status=active&id=44228)
+  dataset (real US consumer-credit records, target `SeriousDlqin2yrs`) split by borrower
+  age into reference/current windows for genuine feature drift, with a **controlled model
+  regression injected** into v2 (asymmetric missed-default label noise) so the incident
+  has ground truth. Real distributions and real Evidently drift; a known correct action.
+  Measured gap: val_recall 0.637 → 0.156, AUC 0.854 → 0.810.
+
+Injecting a known regression into real data is standard practice for validating a
+drift-detection system — it gives the evaluator ground truth for what the agent *should*
+decide while the drift computation still runs on genuine distributions.
+
+The backend routes each request to the right world (model + parquet frames + label
+column) per the `dataset` field; the tool layer reads those from env vars, applied
+per-request under a lock so concurrent requests stay isolated.
 
 Run the web app locally:
 
@@ -144,10 +166,11 @@ Run the web app locally:
 # 1. build the React frontend (FastAPI serves the built assets)
 cd frontend && npm install && npm run build && cd ..
 
-# 2. seed the registry once, then start the backend (frontend + API on one port)
+# 2. seed both worlds, then start the backend (frontend + API on one port)
 export ANTHROPIC_API_KEY=sk-ant-...
 export MLFLOW_TRACKING_URI="sqlite:///$(pwd)/mlflow.db"
-PYTHONPATH=src uv run python scripts/seed_demo.py
+PYTHONPATH=src uv run python scripts/seed_demo.py     # synthetic world (fraud-scorer)
+PYTHONPATH=src uv run python scripts/seed_real.py     # real world (credit-risk)
 PYTHONPATH=src uv run uvicorn app.main:app --port 8000     # open http://localhost:8000
 ```
 
@@ -222,6 +245,7 @@ Claude Desktop config:
 - [x] CI: gate + trajectory suite on every push
 - [x] live mode: real Evidently drift computation, MLflow registry history/diff, real alias rollback
 - [x] live web demo: React + Vite frontend on FastAPI, deployed on Render
+- [x] two demo worlds: crafted synthetic scenario + real US credit-risk data, selectable in the UI
 - [x] published: PyPI (`pip install mendrift-mcp`) + MCP Registry (`io.github.suneel190700/mendrift-mcp`)
 
 ## License
