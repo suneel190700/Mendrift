@@ -55,8 +55,8 @@ def _live_drift_report(model_name: str) -> dict[str, Any]:
     from evidently.presets import DataDriftPreset
 
     data_dir = Path(os.environ.get("MENDRIFT_DATA_DIR", "data"))
-    reference = pd.read_parquet(data_dir / "reference.parquet")
-    current = pd.read_parquet(data_dir / "current.parquet")
+    reference = pd.read_parquet(data_dir / os.environ.get("MENDRIFT_REF_FILE", "reference.parquet"))
+    current = pd.read_parquet(data_dir / os.environ.get("MENDRIFT_CUR_FILE", "current.parquet"))
 
     # Schema changes are drift too — report columns added/removed between windows.
     ref_cols, cur_cols = set(reference.columns), set(current.columns)
@@ -164,7 +164,7 @@ def _live_metric_anomalies(model_name: str, lookback_hours: int) -> dict[str, An
 
     mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5001"))
     data_dir = Path(os.environ.get("MENDRIFT_DATA_DIR", "data"))
-    current = pd.read_parquet(data_dir / "current.parquet")
+    current = pd.read_parquet(data_dir / os.environ.get("MENDRIFT_CUR_FILE", "current.parquet"))
 
     def rate(alias: str) -> float | None:
         try:

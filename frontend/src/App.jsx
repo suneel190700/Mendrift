@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import AlertForm, { PRESETS } from "./components/AlertForm";
+import AlertForm, { WORLDS } from "./components/AlertForm";
 import AgentTrace from "./components/AgentTrace";
 import { diagnose, decide, health } from "./api";
 import "./App.css";
 
 export default function App() {
-  const [alert, setAlert] = useState({ ...PRESETS[0], __preset: 0 });
+  const [dataset, setDataset] = useState("synthetic");
+  const [alert, setAlert] = useState({ ...WORLDS.synthetic.presets[0], __preset: 0 });
   const [state, setState] = useState(null);
   const [running, setRunning] = useState(false);
   const [deciding, setDeciding] = useState(null);
@@ -19,7 +20,8 @@ export default function App() {
   async function handleRun() {
     setRunning(true); setError(null); setState(null);
     try {
-      const { __preset, ...payload } = alert;
+      const { __preset, ...rest } = alert;
+      const payload = { ...rest, dataset };
       const result = await diagnose(payload);
       setState(result);
     } catch (e) {
@@ -57,9 +59,15 @@ export default function App() {
         a remediation. Destructive actions stop at a human approval gate. <b>You are the human.</b>
       </p>
       <div className="grid">
-        <AlertForm alert={alert} setAlert={setAlert} onRun={handleRun} running={running} />
+        <AlertForm
+          dataset={dataset} setDataset={setDataset}
+          alert={alert} setAlert={setAlert}
+          onRun={handleRun} running={running}
+        />
         <div className="panel">
-          <div className="panel__head">agent trace</div>
+          <div className="panel__head">
+            agent trace {state?.dataset ? `· ${WORLDS[state.dataset]?.label || state.dataset}` : ""}
+          </div>
           <div className="panel__body">
             {warming && !state && !running && (
               <div className="warming"><span className="spinner" /><br /><br />

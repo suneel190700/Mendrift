@@ -111,3 +111,14 @@ textarea { resize: vertical; min-height: 72px; }
 
 .footer { margin-top: 44px; border-top: 1px solid var(--line); padding-top: 22px;
   color: var(--ink-faint); font-size: 12px; font-family: var(--mono); }
+
+/* dataset world toggle */
+.worldtoggle { display: flex; gap: 6px; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 10px; padding: 4px; }
+.worldbtn { flex: 1; font-family: var(--mono); font-size: 12px; padding: 9px 10px; border-radius: 7px;
+  cursor: pointer; border: 1px solid transparent; background: transparent; color: var(--ink-dim);
+  transition: all 0.13s; }
+.worldbtn:hover { color: var(--ink); }
+.worldbtn--active { background: var(--panel-2); border-color: var(--signal-dim); color: var(--signal); }
+.world-blurb { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); margin-top: 8px;
+  line-height: 1.6; }
